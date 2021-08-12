@@ -1,6 +1,8 @@
 *.dem
 static/
 demofiles/
+json/
+build.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

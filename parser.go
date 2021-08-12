@@ -103,7 +103,6 @@ func main() {
 
 	// arg info
 	ArgParser()
-
 	f, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
