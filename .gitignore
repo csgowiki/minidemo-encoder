@@ -2,6 +2,7 @@
 static/
 demofiles/
 json/
+temp/
 build.sh
 
 # Byte-compiled / optimized / DLL files

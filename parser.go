@@ -3,284 +3,486 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
-	"io"
+	"io/ioutil"
+	"strings"
+
+	"log"
 	"os"
-	"time"
-	"strconv"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
+	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
 	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
 )
 
-type UtilityRecord struct {
-	player_name      string
-	steamid          uint64
-	utType           string
-	throw_pitch      float32
-	throw_yaw        float32
-	throw_posX       float32
-	throw_posY       float32
-	throw_posZ       float32
-  	velocity_x       float32
- 	velocity_y       float32
-  	velocity_z       float32
-	end_posX         float32
-	end_posY         float32
-	end_posZ         float32
-	round            int
-	valid            bool
-	start_time       time.Duration
-	air_time         float32
-	match_throw_time float32
-	teamname         string
-	is_walk          bool
-	is_duck          bool
-	is_jump          bool
-	entity_posX		 float32
-	entity_posY		 float32
-	entity_posZ		 float32
+var (
+	WarningLogger *log.Logger
+	InfoLogger    *log.Logger
+	ErrorLogger   *log.Logger
+)
+
+func init() {
+	file, err := os.OpenFile("demoparser.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	InfoLogger = log.New(file, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	WarningLogger = log.New(file, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
+	ErrorLogger = log.New(file, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-var utrecord_collector map[int64]UtilityRecord
-var type_map map[string]string
-var filePath, mapName, resPath string
-var tickRate float64
+// Game is the overall struct that holds everything
+type Game struct {
+	MatchName     string      `json:"MatchId"`
+	ClientName    string      `json:"ClientName"`
+	Map           string      `json:"MapName"`
+	TickRate      int32       `json:"TickRate"`
+	PlaybackTicks int32       `json:"PlaybackTicks"`
+	ParseRate     int         `json:"ParseRate"`
+	Rounds        []GameRound `json:"GameRounds"`
+}
+
+// GameRound information and all of the associated events
+type GameRound struct {
+	RoundNum        int32       `json:"RoundNum"`
+	StartTick       int32       `json:"StartTick"`
+	FreezeTimeEnd   int32       `json:"FreezeTimeEnd"`
+	EndTick         int32       `json:"EndTick"`
+	EndOfficialTick int32       `json:"EndOfficialTick"`
+	Reason          string      `json:"RoundEndReason"`
+	TScore          int32       `json:"TScore"`
+	CTScore         int32       `json:"CTScore"`
+	EndTScore       int32       `json:"EndTScore"`
+	EndCTScore      int32       `json:"EndCTScore"`
+	CTTeam          *string     `json:"CTTeam"`
+	TTeam           *string     `json:"TTeam"`
+	Frames          []GameFrame `json:"Frames"`
+}
+
+// GameFrame (game state at time t)
+type GameFrame struct {
+	Tick int32         `json:"Tick"`
+	T    TeamFrameInfo `json:"T"`
+	CT   TeamFrameInfo `json:"CT"`
+}
+
+// TeamFrameInfo at time t
+type TeamFrameInfo struct {
+	Side    string       `json:"Side"`
+	Team    string       `json:"TeamName"`
+	Players []PlayerInfo `json:"Players"`
+}
+
+// PlayerInfo at time t
+type PlayerInfo struct {
+	PlayerName string  `json:"Name"`
+	X          float32 `json:"X"`
+	Y          float32 `json:"Y"`
+	Z          float32 `json:"Z"`
+	ViewX      float32 `json:"ViewX"`
+	ViewY      float32 `json:"ViewY"`
+	VelocityX  float32 `json:"VelocityX"`
+	VelocityY  float32 `json:"VelocityY"`
+	VelocityZ  float32 `json:"VelocityZ"`
+	IsAlive    bool    `json:"IsAlive"`
+}
+
+var filePath string
 
 func ArgParser() {
 	flag.StringVar(&filePath, "filepath", "Unknown", "Demo file path")
-	flag.StringVar(&resPath, "topath", "Unknown", "Demo file path")
 	flag.Parse()
 }
 
-func f2str(input_num float32) string {
-	return strconv.FormatFloat(float64(input_num), 'f', 6, 64)
+func convertRoundEndReason(r events.RoundEndReason) string {
+	switch reason := r; reason {
+	case 1:
+		return "TargetBombed"
+	case 2:
+		return "VIPEscaped"
+	case 3:
+		return "VIPKilled"
+	case 4:
+		return "TerroristsEscaped"
+	case 5:
+		return "CTStoppedEscape"
+	case 6:
+		return "TerroristsStopped"
+	case 7:
+		return "BombDefused"
+	case 8:
+		return "CTWin"
+	case 9:
+		return "TWin"
+	case 10:
+		return "Draw"
+	case 11:
+		return "HostagesRescued"
+	case 12:
+		return "TargetSaved"
+	case 13:
+		return "HostagesNotRescued"
+	case 14:
+		return "TerroristsNotEscaped"
+	case 15:
+		return "VIPNotEscaped"
+	case 16:
+		return "GameStart"
+	case 17:
+		return "TerroristsSurrender"
+	case 18:
+		return "CTSurrender"
+	default:
+		return "Unknown"
+	}
 }
 
-func JsonFomat(ut UtilityRecord, round int) string {
-	var json_list = []string {
-		f2str(ut.throw_pitch),
-		f2str(ut.throw_yaw),
-		f2str(ut.air_time),
-		f2str(ut.end_posX),
-		f2str(ut.end_posY),
-		f2str(ut.end_posZ),
-		strconv.FormatBool(ut.is_duck),
-		strconv.FormatBool(ut.is_jump),
-		strconv.FormatBool(ut.is_walk),
-		strconv.Itoa(round),
-		f2str(ut.match_throw_time),
-		ut.player_name,
-		strconv.FormatUint(ut.steamid, 10),
-		ut.teamname,
-		f2str(ut.throw_posX),
-		f2str(ut.throw_posY),
-		f2str(ut.throw_posZ),
-		type_map[ut.utType],
-		f2str(ut.velocity_x),
-		f2str(ut.velocity_y),
-		f2str(ut.velocity_z),
-		f2str(ut.entity_posX),
-		f2str(ut.entity_posY),
-		f2str(ut.entity_posZ),
-	}
-	str, err := json.Marshal(json_list)
-	if err != nil {
-		panic(err)
-	}
-	return string(str)
+func parsePlayer(player *common.Player) PlayerInfo {
+	currentPlayer := PlayerInfo{}
+	currentPlayer.PlayerName = player.Name
+	currentPlayer.VelocityX = float32(player.Velocity().X)
+	currentPlayer.VelocityY = float32(player.Velocity().Y)
+	currentPlayer.VelocityZ = float32(player.Velocity().Z)
+	currentPlayer.X = float32(player.LastAlivePosition.X)
+	currentPlayer.Y = float32(player.LastAlivePosition.Y)
+	currentPlayer.Z = float32(player.LastAlivePosition.Z)
+	currentPlayer.ViewX = player.ViewDirectionX()
+	currentPlayer.ViewY = player.ViewDirectionY()
+	currentPlayer.IsAlive = player.IsAlive()
+
+	//
+	// ...
+	//
+	return currentPlayer
 }
 
-func checkFileIsExist(filename string) bool {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return false
+// Define cleaning functions
+func cleanMapName(mapName string) string {
+	lastSlash := strings.LastIndex(mapName, "/")
+	if lastSlash == -1 {
+		return mapName
 	}
-	return true
+	return mapName[lastSlash+1 : len(mapName)]
 }
-
 func main() {
-	const he_flash_time float32 = 1.63
-
 	// arg info
 	ArgParser()
 	f, err := os.Open(filePath)
-	if err != nil {
-		panic(err)
-	}
+	checkError(err)
 	defer f.Close()
 
 	p := dem.NewParser(f)
 	defer p.Close()
 
-	round := 0
-	var round_start_time time.Duration
+	// flags
+	currentFrameIdx := 0
+	roundStarted := 0
+	roundInEndTime := 0
+	roundInFreezetime := 0
 
+	// header
 	header, err := p.ParseHeader()
-	if err != nil {
-		panic(err)
+	checkError(err)
+
+	// game object
+	currentGame := Game{}
+	if p.TickRate() == 0 {
+		currentGame.TickRate = 128
+	} else {
+		currentGame.TickRate = int32(p.TickRate())
 	}
-	mapName = header.MapName
-	tickRate = p.TickRate()
-	count := 0
+	currentGame.PlaybackTicks = int32(header.PlaybackTicks)
+	currentGame.ClientName = header.ClientName
+	currentGame.ParseRate = 128
+	currentGame.MatchName = "demo"
+	currentGame.Map = cleanMapName(header.MapName)
 
-	var infoPath = resPath
-	var infoFile *os.File
-	var infoError error
-
-	if !checkFileIsExist(infoPath) {
-		infoFile, infoError = os.Create(infoPath)
-	}
-	infoFile, infoError = os.OpenFile(infoPath, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
-	if infoError != nil {
-		panic(infoError)
-	}
-	defer infoFile.Close()
-
-	// init
-	infoFile.WriteString("[[]")
-
-	type_map = make(map[string]string)
-	type_map["Smoke Grenade"] = "smokegrenade"
-	type_map["HE Grenade"] = "hegrenade"
-	type_map["Flashbang"] = "flashbang"
-	type_map["Incendiary Grenade"] = "incgrenade"
-	type_map["Molotov"] = "molotov"
-
-	utrecord_collector = make(map[int64]UtilityRecord)
-
-	p.RegisterEventHandler(func(e events.MatchStartedChanged) {
-		round = 1
-		round_start_time = p.CurrentTime()
-	})
+	// game round
+	currentRound := GameRound{}
+	InfoLogger.Printf("Demo is of type %s with tickrate %d \n", currentGame.ClientName, currentGame.TickRate)
 
 	p.RegisterEventHandler(func(e events.RoundStart) {
-		round++
-		round_start_time = p.CurrentTime()
+		gs := p.GameState()
+		if roundStarted == 1 {
+			currentRound.EndOfficialTick = int32(gs.IngameTick()) - (5 * currentGame.TickRate)
+			currentGame.Rounds = append(currentGame.Rounds, currentRound)
+		}
+		roundStarted = 1
+		roundInFreezetime = 1
+		roundInEndTime = 0
+		currentRound = GameRound{}
+		currentRound.RoundNum = int32(len(currentGame.Rounds) + 1)
+		currentRound.StartTick = int32(gs.IngameTick())
+		currentRound.TScore = int32(gs.TeamTerrorists().Score())
+		currentRound.CTScore = int32(gs.TeamCounterTerrorists().Score())
+		tTeam := gs.TeamTerrorists().ClanName()
+		ctTeam := gs.TeamCounterTerrorists().ClanName()
+		currentRound.TTeam = &tTeam
+		currentRound.CTTeam = &ctTeam
 	})
 
 	p.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
-		round_start_time = p.CurrentTime()
+		gs := p.GameState()
+		roundInFreezetime = 0
+		currentRound.FreezeTimeEnd = int32(gs.IngameTick())
 	})
 
-	p.RegisterEventHandler(func(e events.GrenadeProjectileThrow) {
-		uId := int64(e.Projectile.WeaponInstance.UniqueID())
-		_, ok := utrecord_collector[uId]
-		if !ok {
-			utrecord_collector[int64(e.Projectile.WeaponInstance.UniqueID())] = UtilityRecord{
-				player_name:      string(e.Projectile.Thrower.Name),
-				steamid:          uint64(e.Projectile.Thrower.SteamID64),
-				throw_yaw:        float32(e.Projectile.Thrower.ViewDirectionX()),
-				throw_pitch:      float32(e.Projectile.Thrower.ViewDirectionY()),
-				throw_posX:       float32(e.Projectile.Thrower.LastAlivePosition.X),
-				throw_posY:       float32(e.Projectile.Thrower.LastAlivePosition.Y),
-				throw_posZ:       float32(e.Projectile.Thrower.LastAlivePosition.Z),
-       			velocity_x:       float32(e.Projectile.Velocity().X),
-        		velocity_y:       float32(e.Projectile.Velocity().Y),
-        		velocity_z:       float32(e.Projectile.Velocity().Z),
-				utType:           string(e.Projectile.WeaponInstance.String()),
-				round:            int(round),
-				valid:            false,
-				start_time:       p.CurrentTime(),
-				match_throw_time: float32((p.CurrentTime() - round_start_time).Seconds()),
-				teamname:         string(e.Projectile.Thrower.TeamState.ClanName()),
-				is_walk:          e.Projectile.Thrower.IsWalking(),
-				is_jump:          e.Projectile.Thrower.IsAirborne(),
-				is_duck:          e.Projectile.Thrower.Flags().DuckingKeyPressed(),
-				entity_posX:	  float32(e.Projectile.Entity.Position().X),
-				entity_posY:	  float32(e.Projectile.Entity.Position().Y),
-				entity_posZ:	  float32(e.Projectile.Entity.Position().Z),
+	p.RegisterEventHandler(func(e events.RoundEndOfficial) {
+		gs := p.GameState()
+		if roundInEndTime == 0 {
+			currentRound.EndOfficialTick = int32(gs.IngameTick())
+			tPlayers := gs.TeamTerrorists().Members()
+			aliveT := 0
+			ctPlayers := gs.TeamCounterTerrorists().Members()
+			aliveCT := 0
+			for _, p := range tPlayers {
+				if p.IsAlive() && p != nil {
+					aliveT = aliveT + 1
+				}
+			}
+			for _, p := range ctPlayers {
+				if p.IsAlive() && p != nil {
+					aliveCT = aliveCT + 1
+				}
+			}
+			// reasonable ?
+			if aliveCT == 0 {
+				currentRound.Reason = "TWin"
+				currentRound.EndTScore = currentRound.TScore + 1
+				currentRound.EndCTScore = currentRound.CTScore
+			} else {
+				currentRound.Reason = "CTWin"
+				currentRound.EndCTScore = currentRound.CTScore + 1
+				currentRound.EndTScore = currentRound.TScore
 			}
 		}
 	})
 
-	// SMOKE DETONATE
-	p.RegisterEventHandler(func(e events.SmokeStart) {
-		uId := int64(e.Grenade.UniqueID())
-		utrecord, ok := utrecord_collector[uId]
-		if ok && !utrecord.valid {
-			utrecord.valid = true
-			utrecord.end_posX = float32(e.Position.X)
-			utrecord.end_posY = float32(e.Position.Y)
-			utrecord.end_posZ = float32(e.Position.Z)
-			end_time := p.CurrentTime()
-			utrecord.air_time = float32((end_time - utrecord.start_time).Seconds())
-			count++
-
-			json_str := JsonFomat(utrecord, round)
-			io.WriteString(infoFile, ","+json_str)
-
-			utrecord_collector[uId] = utrecord
+	p.RegisterEventHandler(func(e events.RoundEnd) {
+		gs := p.GameState()
+		if roundStarted == 0 {
+			roundStarted = 1
+			currentRound.RoundNum = 0
+			currentRound.StartTick = 0
+			currentRound.TScore = 0
+			currentRound.CTScore = 0
+			tTeam := gs.TeamTerrorists().ClanName()
+			ctTeam := gs.TeamCounterTerrorists().ClanName()
+			currentRound.TTeam = &tTeam
+			currentRound.CTTeam = &ctTeam
+		}
+		roundInEndTime = 1
+		currentRound.EndTick = int32(gs.IngameTick())
+		currentRound.EndOfficialTick = int32(gs.IngameTick())
+		currentRound.Reason = convertRoundEndReason(e.Reason)
+		switch e.Winner {
+		case common.TeamTerrorists:
+			currentRound.EndTScore = currentRound.TScore + 1
+			currentRound.EndCTScore = currentRound.CTScore
+		case common.TeamCounterTerrorists:
+			currentRound.EndCTScore = currentRound.CTScore + 1
+			currentRound.EndTScore = currentRound.TScore
 		}
 	})
 
-	// MOLOTOV & INC GRENADE DETONATE
-	p.RegisterEventHandler(func(e events.GrenadeProjectileDestroy) {
-		if e.Projectile.WeaponInstance.Type.String() != string("Incendiary Grenade") && e.Projectile.WeaponInstance.Type.String() != string("Molotov") {
-			return
-		}
-		uId := int64(e.Projectile.WeaponInstance.UniqueID())
+	tickcount := 0
+	p.RegisterEventHandler(func(e events.FrameDone) {
+		gs := p.GameState()
 
-		utrecord, ok := utrecord_collector[uId]
-		if ok && !utrecord.valid {
-			utrecord.valid = true
-			utrecord.end_posX = float32(e.Projectile.Position().X)
-			utrecord.end_posY = float32(e.Projectile.Position().Y)
-			utrecord.end_posZ = float32(e.Projectile.Position().Z)
+		if (roundInFreezetime == 0) && (currentFrameIdx == 0) {
+			currentFrame := GameFrame{}
+			currentFrame.Tick = int32(gs.IngameTick())
+			// Parse T
+			currentFrame.T = TeamFrameInfo{}
+			currentFrame.T.Side = "T"
+			currentFrame.T.Team = gs.TeamTerrorists().ClanName()
+			tPlayers := gs.TeamTerrorists().Members()
+			for _, player := range tPlayers {
+				if player != nil {
+					currentFrame.T.Players = append(currentFrame.T.Players, parsePlayer(player))
+				}
+			}
+			// Parse CT
+			currentFrame.CT = TeamFrameInfo{}
+			currentFrame.CT.Side = "CT"
+			currentFrame.CT.Team = gs.TeamCounterTerrorists().ClanName()
+			ctPlayers := gs.TeamCounterTerrorists().Members()
 
-			end_time := p.CurrentTime()
-			utrecord.air_time = float32((end_time - utrecord.start_time).Seconds())
-			count++
+			if tickcount < 100 {
+				for _, player := range ctPlayers {
+					if player != nil {
+						currentFrame.CT.Players = append(currentFrame.CT.Players, parsePlayer(player))
+					}
+				}
+			}
+			tickcount++
 
-			json_str := JsonFomat(utrecord, round)
-			io.WriteString(infoFile, ","+json_str)
-			utrecord_collector[uId] = utrecord
-		}
-	})
-
-	// FLASH DETONATE
-	p.RegisterEventHandler(func(e events.FlashExplode) {
-		uId := int64(e.Grenade.UniqueID())
-		utrecord, ok := utrecord_collector[uId]
-		if ok && !utrecord.valid {
-			utrecord.valid = true
-			utrecord.end_posX = float32(e.Position.X)
-			utrecord.end_posY = float32(e.Position.Y)
-			utrecord.end_posZ = float32(e.Position.Z)
-			utrecord.air_time = he_flash_time
-			count++
-
-			json_str := JsonFomat(utrecord, round)
-			io.WriteString(infoFile, ","+json_str)
-			utrecord_collector[uId] = utrecord
-		}
-	})
-
-	// HE GRENADE DETONATE
-	p.RegisterEventHandler(func(e events.HeExplode) {
-		uId := int64(e.Grenade.UniqueID())
-		utrecord, ok := utrecord_collector[uId]
-		if ok && !utrecord.valid {
-			utrecord.valid = true
-			utrecord.end_posX = float32(e.Position.X)
-			utrecord.end_posY = float32(e.Position.Y)
-			utrecord.end_posZ = float32(e.Position.Z)
-			utrecord.air_time = he_flash_time
-			count++
-			json_str := JsonFomat(utrecord, round)
-			io.WriteString(infoFile, ","+json_str)
-
-			utrecord_collector[uId] = utrecord
+			currentRound.Frames = append(currentRound.Frames, currentFrame)
+			if currentFrameIdx == (currentGame.ParseRate - 1) {
+				currentFrameIdx = 0
+			} else {
+				currentFrameIdx = currentFrameIdx + 1
+			}
+		} else {
+			if currentFrameIdx == (currentGame.ParseRate - 1) {
+				currentFrameIdx = 0
+			} else {
+				currentFrameIdx = currentFrameIdx + 1
+			}
 		}
 	})
-
 	// Parse to end
 	err = p.ParseToEnd()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	n, infoError := io.WriteString(infoFile, "]")
-	if infoError != nil {
-		panic(infoError)
+	checkError(err)
+
+	currentGame.Rounds = append(currentGame.Rounds, currentRound)
+
+	// clean rounds
+	if len(currentGame.Rounds) > 0 {
+		InfoLogger.Println("Cleaning data")
+
+		// Remove rounds where win reason doesn't exist
+		var tempRoundsReason []GameRound
+		for i := range currentGame.Rounds {
+			currRound := currentGame.Rounds[i]
+			if currRound.Reason == "CTWin" || currRound.Reason == "BombDefused" || currRound.Reason == "TargetSaved" || currRound.Reason == "TWin" || currRound.Reason == "TargetBombed" {
+				tempRoundsReason = append(tempRoundsReason, currRound)
+			}
+		}
+		currentGame.Rounds = tempRoundsReason
+
+		// Remove rounds with missing end or start tick
+		var tempRoundsTicks []GameRound
+		for i := range currentGame.Rounds {
+			currRound := currentGame.Rounds[i]
+			if currRound.StartTick > 0 && currRound.EndTick > 0 {
+				tempRoundsTicks = append(tempRoundsTicks, currRound)
+			} else {
+				if currRound.EndTick > 0 {
+					tempRoundsTicks = append(tempRoundsTicks, currRound)
+				}
+			}
+		}
+		currentGame.Rounds = tempRoundsTicks
+
+		// Remove rounds that dip in score
+		var tempRoundsDip []GameRound
+		for i := range currentGame.Rounds {
+			if i > 0 && i < len(currentGame.Rounds) {
+				prevRound := currentGame.Rounds[i-1]
+				currRound := currentGame.Rounds[i]
+				if currRound.CTScore+currRound.TScore >= prevRound.CTScore+prevRound.TScore {
+					tempRoundsDip = append(tempRoundsDip, currRound)
+				}
+			} else if i == 0 {
+				currRound := currentGame.Rounds[i]
+				tempRoundsDip = append(tempRoundsDip, currRound)
+			}
+		}
+		currentGame.Rounds = tempRoundsDip
+
+		// Set first round scores to 0-0
+		currentGame.Rounds[0].TScore = 0
+		currentGame.Rounds[0].CTScore = 0
+
+		// Remove rounds where score doesn't change
+		var tempRounds []GameRound
+		for i := range currentGame.Rounds {
+			if i < len(currentGame.Rounds)-1 {
+				nextRound := currentGame.Rounds[i+1]
+				currRound := currentGame.Rounds[i]
+				if !(currRound.CTScore+currRound.TScore >= nextRound.CTScore+nextRound.TScore) {
+					tempRounds = append(tempRounds, currRound)
+				}
+			} else {
+				currRound := currentGame.Rounds[i]
+				tempRounds = append(tempRounds, currRound)
+			}
+
+		}
+		currentGame.Rounds = tempRounds
+
+		// Find the starting round. Starting round is defined as the first 0-0 round which has following rounds.
+		startIdx := 0
+		for i, r := range currentGame.Rounds {
+			if (i < len(currentGame.Rounds)-3) && (len(currentGame.Rounds) > 3) {
+				if (r.TScore+r.CTScore == 0) && (currentGame.Rounds[i+1].TScore+currentGame.Rounds[i+1].CTScore > 0) && (currentGame.Rounds[i+2].TScore+currentGame.Rounds[i+2].CTScore > 0) && (currentGame.Rounds[i+3].TScore+currentGame.Rounds[i+4].CTScore > 0) {
+					startIdx = i
+				}
+			}
+		}
+		currentGame.Rounds = currentGame.Rounds[startIdx:len(currentGame.Rounds)]
+
+		// Remove rounds with 0-0 scorelines that arent first
+		var tempRoundsScores []GameRound
+		for i := range currentGame.Rounds {
+			currRound := currentGame.Rounds[i]
+			if i > 0 {
+				if currRound.TScore+currRound.CTScore > 0 {
+					tempRoundsScores = append(tempRoundsScores, currRound)
+				}
+			} else {
+				tempRoundsScores = append(tempRoundsScores, currRound)
+			}
+		}
+		currentGame.Rounds = tempRoundsScores
+
+		// Determine scores
+		for i := range currentGame.Rounds {
+			if i == 15 {
+				currentGame.Rounds[i].TScore = currentGame.Rounds[i-1].EndCTScore
+				currentGame.Rounds[i].CTScore = currentGame.Rounds[i-1].EndTScore
+				if currentGame.Rounds[i].Reason == "CTWin" || currentGame.Rounds[i].Reason == "BombDefused" || currentGame.Rounds[i].Reason == "TargetSaved" {
+					currentGame.Rounds[i].EndTScore = currentGame.Rounds[i].TScore
+					currentGame.Rounds[i].EndCTScore = currentGame.Rounds[i].CTScore + 1
+				} else {
+					currentGame.Rounds[i].EndTScore = currentGame.Rounds[i].TScore + 1
+					currentGame.Rounds[i].EndCTScore = currentGame.Rounds[i].CTScore
+				}
+			} else if i > 0 {
+				currentGame.Rounds[i].TScore = currentGame.Rounds[i-1].EndTScore
+				currentGame.Rounds[i].CTScore = currentGame.Rounds[i-1].EndCTScore
+				if currentGame.Rounds[i].Reason == "CTWin" || currentGame.Rounds[i].Reason == "BombDefused" || currentGame.Rounds[i].Reason == "TargetSaved" {
+					currentGame.Rounds[i].EndTScore = currentGame.Rounds[i].TScore
+					currentGame.Rounds[i].EndCTScore = currentGame.Rounds[i].CTScore + 1
+				} else {
+					currentGame.Rounds[i].EndTScore = currentGame.Rounds[i].TScore + 1
+					currentGame.Rounds[i].EndCTScore = currentGame.Rounds[i].CTScore
+				}
+			} else if i == 0 {
+				// Set first round to 0-0, switch other scores
+				currentGame.Rounds[i].TScore = 0
+				currentGame.Rounds[i].CTScore = 0
+				if currentGame.Rounds[i].Reason == "CTWin" || currentGame.Rounds[i].Reason == "BombDefused" || currentGame.Rounds[i].Reason == "TargetSaved" {
+					currentGame.Rounds[i].EndTScore = currentGame.Rounds[i].TScore
+					currentGame.Rounds[i].EndCTScore = currentGame.Rounds[i].CTScore + 1
+				} else {
+					currentGame.Rounds[i].EndTScore = currentGame.Rounds[i].TScore + 1
+					currentGame.Rounds[i].EndCTScore = currentGame.Rounds[i].CTScore
+				}
+			}
+		}
+
+		// Set correct round numbers
+		for i := range currentGame.Rounds {
+			currentGame.Rounds[i].RoundNum = int32(i + 1)
+		}
+
+		InfoLogger.Println("Cleaned data, writing to JSON file")
+
+		// Write the JSON
+		file, _ := json.MarshalIndent(currentGame, "", " ")
+		_ = ioutil.WriteFile("json"+"/"+currentGame.MatchName+".json", file, 0644)
+
+		InfoLogger.Println("Wrote to JSON file to: " + "json" + "/" + currentGame.MatchName + ".json")
 	}
-	fmt.Printf("writen %d bytes | %d\n", n, count)
+}
+
+// Function to handle errors
+func checkError(err error) {
+	if err != nil {
+		ErrorLogger.Println("DEMO STREAM ERROR")
+		WarningLogger.Println("Demo stream errors can still write output, check for JSON file")
+		ErrorLogger.Println(err.Error())
+	}
 }
