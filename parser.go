@@ -20,6 +20,12 @@ var (
 	ErrorLogger   *log.Logger
 )
 
+const IN_JUMP int32 = (1 << 1)
+const IN_DUCK int32 = (1 << 2)
+const IN_RELOAD int32 = (1 << 13)
+const IN_SPEED int32 = (1 << 17)
+const IN_ZOOM int32 = (1 << 19)
+
 func init() {
 	file, err := os.OpenFile("demoparser.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
@@ -75,16 +81,17 @@ type TeamFrameInfo struct {
 
 // PlayerInfo at time t
 type PlayerInfo struct {
-	PlayerName string  `json:"Name"`
-	X          float32 `json:"X"`
-	Y          float32 `json:"Y"`
-	Z          float32 `json:"Z"`
-	ViewX      float32 `json:"ViewX"`
-	ViewY      float32 `json:"ViewY"`
-	VelocityX  float32 `json:"VelocityX"`
-	VelocityY  float32 `json:"VelocityY"`
-	VelocityZ  float32 `json:"VelocityZ"`
-	IsAlive    bool    `json:"IsAlive"`
+	PlayerName    string  `json:"Name"`
+	X             float32 `json:"X"`
+	Y             float32 `json:"Y"`
+	Z             float32 `json:"Z"`
+	ViewX         float32 `json:"ViewX"`
+	ViewY         float32 `json:"ViewY"`
+	VelocityX     float32 `json:"VelocityX"`
+	VelocityY     float32 `json:"VelocityY"`
+	VelocityZ     float32 `json:"VelocityZ"`
+	PlayerButtons int32   `json:"Buttons"`
+	IsAlive       bool    `json:"IsAlive"`
 }
 
 var filePath string
@@ -149,7 +156,19 @@ func parsePlayer(player *common.Player) PlayerInfo {
 	currentPlayer.ViewX = player.ViewDirectionX()
 	currentPlayer.ViewY = player.ViewDirectionY()
 	currentPlayer.IsAlive = player.IsAlive()
-
+	currentPlayer.PlayerButtons = 0
+	if player.IsReloading {
+		currentPlayer.PlayerButtons |= IN_RELOAD
+	}
+	if player.IsDucking() || player.IsDuckingInProgress() {
+		currentPlayer.PlayerButtons |= IN_DUCK
+	}
+	if player.IsAirborne() {
+		currentPlayer.PlayerButtons |= IN_JUMP
+	}
+	if player.IsWalking() {
+		currentPlayer.PlayerButtons |= IN_SPEED
+	}
 	//
 	// ...
 	//
@@ -162,7 +181,7 @@ func cleanMapName(mapName string) string {
 	if lastSlash == -1 {
 		return mapName
 	}
-	return mapName[lastSlash+1 : len(mapName)]
+	return mapName[lastSlash+1:]
 }
 func main() {
 	// arg info
@@ -193,7 +212,7 @@ func main() {
 	}
 	currentGame.PlaybackTicks = int32(header.PlaybackTicks)
 	currentGame.ClientName = header.ClientName
-	currentGame.ParseRate = 128
+	currentGame.ParseRate = 1
 	currentGame.MatchName = "demo"
 	currentGame.Map = cleanMapName(header.MapName)
 
@@ -285,7 +304,6 @@ func main() {
 		}
 	})
 
-	tickcount := 0
 	p.RegisterEventHandler(func(e events.FrameDone) {
 		gs := p.GameState()
 
@@ -308,14 +326,11 @@ func main() {
 			currentFrame.CT.Team = gs.TeamCounterTerrorists().ClanName()
 			ctPlayers := gs.TeamCounterTerrorists().Members()
 
-			if tickcount < 100 {
-				for _, player := range ctPlayers {
-					if player != nil {
-						currentFrame.CT.Players = append(currentFrame.CT.Players, parsePlayer(player))
-					}
+			for _, player := range ctPlayers {
+				if player != nil {
+					currentFrame.CT.Players = append(currentFrame.CT.Players, parsePlayer(player))
 				}
 			}
-			tickcount++
 
 			currentRound.Frames = append(currentRound.Frames, currentFrame)
 			if currentFrameIdx == (currentGame.ParseRate - 1) {
@@ -471,9 +486,8 @@ func main() {
 		InfoLogger.Println("Cleaned data, writing to JSON file")
 
 		// Write the JSON
-		file, _ := json.MarshalIndent(currentGame, "", " ")
+		file, _ := json.MarshalIndent(currentGame.Rounds[3], "", " ")
 		_ = ioutil.WriteFile("json"+"/"+currentGame.MatchName+".json", file, 0644)
-
 		InfoLogger.Println("Wrote to JSON file to: " + "json" + "/" + currentGame.MatchName + ".json")
 	}
 }
