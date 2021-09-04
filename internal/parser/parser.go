@@ -66,6 +66,7 @@ func Start() {
 		ilog.InfoLogger.Println("回合开始：", roundNum)
 		// 初始化录像文件
 		// 写入所有选手的初始位置和角度
+		
 	})
 
 	// 正式结束，包括自由活动时间
