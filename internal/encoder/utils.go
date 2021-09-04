@@ -1,6 +1,9 @@
 package encoder
 
-import "os"
+import (
+	"encoding/binary"
+	"os"
+)
 
 func PathExists(path string) (bool, error) {
 	/*
@@ -17,4 +20,8 @@ func PathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func WriteToBuf(key string, data interface{}) {
+	binary.Write(bufMap[key], binary.LittleEndian, data)
 }

@@ -9,6 +9,8 @@ import (
 	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
 )
 
+var PlayerFramesMap map[string][]FrameInfo = make(map[string][]FrameInfo)
+
 func Start() {
 	filePath := "./demofiles/faze-vs-vitality-m1-mirage.dem"
 	iFile, err := os.Open(filePath)

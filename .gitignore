@@ -5,6 +5,7 @@ json/
 temp/
 temp_/
 rec/
+output/
 build.sh
 
 # Byte-compiled / optimized / DLL files
