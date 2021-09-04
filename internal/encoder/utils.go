@@ -3,6 +3,8 @@ package encoder
 import (
 	"encoding/binary"
 	"os"
+
+	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 )
 
 func PathExists(path string) (bool, error) {
@@ -23,5 +25,9 @@ func PathExists(path string) (bool, error) {
 }
 
 func WriteToBuf(key string, data interface{}) {
-	binary.Write(bufMap[key], binary.LittleEndian, data)
+	if bufMap[key] == nil {
+		ilog.ErrorLogger.Println(key)
+	} else {
+		binary.Write(bufMap[key], binary.LittleEndian, data)
+	}
 }

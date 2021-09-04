@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"os"
 	"time"
+	"strconv"
 
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
-	iparser "github.com/hx-w/minidemo-encoder/internal/parser"
 )
 
 var __MAGIC__ int32 = -559038737
@@ -16,9 +16,11 @@ var __FIELDS_ANGLES__ int32 = 1 << 1
 var __FIELDS_VELOCITY__ int32 = 1 << 2
 
 var bufMap map[string]*bytes.Buffer = make(map[string]*bytes.Buffer)
+var PlayerFramesMap map[string][]FrameInfo = make(map[string][]FrameInfo)
+
+var saveDir string = "./output"
 
 func init() {
-	saveDir := "./output"
 	if ok, _ := PathExists(saveDir); !ok {
 		os.Mkdir(saveDir, os.ModePerm)
 		ilog.InfoLogger.Println("未找到保存目录，已创建：", saveDir)
@@ -27,7 +29,7 @@ func init() {
 	}
 }
 
-func InitPlayerRecFile(initFrame iparser.FrameInitInfo) {
+func InitPlayer(initFrame FrameInitInfo) {
 	if bufMap[initFrame.PlayerName] == nil {
 		bufMap[initFrame.PlayerName] = new(bytes.Buffer)
 	} else {
@@ -61,7 +63,11 @@ func InitPlayerRecFile(initFrame iparser.FrameInitInfo) {
 }
 
 func WriteToRecFile(playerName string, roundNum int32) {
-	fileName := "./output/" + string(roundNum) + "_" + playerName + ".rec"
+	subDir := saveDir + "/round" + strconv.Itoa(int(roundNum))
+	if ok, _ := PathExists(subDir); !ok {
+		os.MkdirAll(subDir, os.ModePerm)
+	}
+	fileName := subDir + "/" + playerName + ".rec"
 	file, err := os.Create(fileName) // 创建文件, "binbin"是文件名字
 	if err != nil {
 		ilog.ErrorLogger.Println("文件创建失败", err.Error())
@@ -70,7 +76,7 @@ func WriteToRecFile(playerName string, roundNum int32) {
 	defer file.Close()
 
 	// step.8 tick count
-	var tickCount int32 = int32(len(iparser.PlayerFramesMap[playerName]))
+	var tickCount int32 = int32(len(PlayerFramesMap[playerName]))
 	WriteToBuf(playerName, tickCount)
 
 	// step.9 bookmark count
@@ -80,7 +86,7 @@ func WriteToRecFile(playerName string, roundNum int32) {
 	// ignore
 
 	// step.11 all tick frame
-	for _, frame := range iparser.PlayerFramesMap[playerName] {
+	for _, frame := range PlayerFramesMap[playerName] {
 		WriteToBuf(playerName, frame.PlayerButtons)
 		WriteToBuf(playerName, frame.PlayerImpulse)
 		for idx := 0; idx < 3; idx++ {

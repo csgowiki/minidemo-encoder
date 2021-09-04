@@ -1,15 +1,12 @@
 package parser
 
 import (
-	"fmt"
 	"os"
 
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
 )
-
-var PlayerFramesMap map[string][]FrameInfo = make(map[string][]FrameInfo)
 
 func Start() {
 	filePath := "./demofiles/faze-vs-vitality-m1-mirage.dem"
@@ -20,23 +17,37 @@ func Start() {
 	defer iParser.Close()
 
 	// 用来记录某一Tick下WeaponAttack事件，在FrameDone中处理
-	attackTickMap := make(map[int][]events.WeaponFire)
+	var attackTickMap map[int][]events.WeaponFire = make(map[int][]events.WeaponFire)
 	// flags
-	roundStarted := 0
-	roundInFreezetime := 0
-	roundNum := 0
-	currentFrameIdx := 0
+	var (
+		roundStarted      = 0
+		roundInFreezetime = 0
+		roundNum          = 0
+		currentFrameIdx   = 0
+	)
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 
 		if (roundInFreezetime == 0) && (currentFrameIdx == 0) {
-			// 解析WeaponAttack事件
-			if attackEvent, ok := attackTickMap[currentTick]; ok {
-				fmt.Println(attackEvent)
-				delete(attackTickMap, currentTick)
+			tPlayers := gs.TeamTerrorists().Members()
+			for _, player := range tPlayers {
+				if player != nil {
+					// 解析WeaponAttack事件
+					var isAttacking bool = false
+					if attackEvent, ok := attackTickMap[currentTick]; ok {
+						for _, atEvent := range attackEvent {
+							if atEvent.Shooter.SteamID64 == player.SteamID64 {
+								isAttacking = true
+								break
+							}
+						}
+					}
+					parsePlayerFrame(player, isAttacking)
+				}
 			}
+			delete(attackTickMap, currentTick)
 		} else {
 			if currentFrameIdx == 0 {
 				currentFrameIdx = 0
@@ -66,13 +77,28 @@ func Start() {
 		ilog.InfoLogger.Println("回合开始：", roundNum)
 		// 初始化录像文件
 		// 写入所有选手的初始位置和角度
-		
+		gs := iParser.GameState()
+		tPlayers := gs.TeamTerrorists().Members()
+		for _, player := range tPlayers {
+			if player != nil {
+				// parse player
+				parsePlayerInitFrame(player)
+			}
+		}
 	})
 
 	// 正式结束，包括自由活动时间
 	iParser.RegisterEventHandler(func(e events.RoundEndOfficial) {
 		ilog.InfoLogger.Println("回合结束：", roundNum)
 		// 结束录像文件
+		gs := iParser.GameState()
+		tPlayers := gs.TeamTerrorists().Members()
+		for _, player := range tPlayers {
+			if player != nil {
+				// save to rec file
+				saveToRecFile(player, int32(roundNum))
+			}
+		}
 	})
 
 	// 回合结束，不包括自由活动时间

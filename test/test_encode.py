@@ -9,7 +9,7 @@ __FIELDS_ORIGIN__ = 1 << 0
 __FIELDS_ANGLES__ = 1 << 1
 __FIELDS_VELOCITY__ = 1 << 2
 
-with open('output/test.rec', 'rb') as iFile:
+with open('output/round1/broky.rec', 'rb') as iFile:
     # Step 1: valid check
     _buffer = iFile.read(4)
     assert _buffer == __MAGIC__
