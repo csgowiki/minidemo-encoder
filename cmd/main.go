@@ -1,9 +1,9 @@
 package main
 
 import (
-	encoder "github.com/hx-w/minidemo-encoder/internal/encoder"
+	miniParser "github.com/hx-w/minidemo-encoder/internal/parser"
 )
 
 func main() {
-	encoder.New()
+	miniParser.Start()
 }
