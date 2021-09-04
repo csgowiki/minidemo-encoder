@@ -32,7 +32,9 @@ func Start() {
 
 		if (roundInFreezetime == 0) && (currentFrameIdx == 0) {
 			tPlayers := gs.TeamTerrorists().Members()
-			for _, player := range tPlayers {
+			ctPlayers := gs.TeamCounterTerrorists().Members()
+			Players := append(tPlayers, ctPlayers...)
+			for _, player := range Players {
 				if player != nil {
 					// 解析WeaponAttack事件
 					var isAttacking bool = false
@@ -79,7 +81,9 @@ func Start() {
 		// 写入所有选手的初始位置和角度
 		gs := iParser.GameState()
 		tPlayers := gs.TeamTerrorists().Members()
-		for _, player := range tPlayers {
+		ctPlayers := gs.TeamCounterTerrorists().Members()
+		Players := append(tPlayers, ctPlayers...)
+		for _, player := range Players {
 			if player != nil {
 				// parse player
 				parsePlayerInitFrame(player)
@@ -93,7 +97,9 @@ func Start() {
 		// 结束录像文件
 		gs := iParser.GameState()
 		tPlayers := gs.TeamTerrorists().Members()
-		for _, player := range tPlayers {
+		ctPlayers := gs.TeamCounterTerrorists().Members()
+		Players := append(tPlayers, ctPlayers...)
+		for _, player := range Players {
 			if player != nil {
 				// save to rec file
 				saveToRecFile(player, int32(roundNum))

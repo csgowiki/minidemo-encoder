@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"bytes"
 	"encoding/binary"
 	"os"
 
@@ -27,7 +28,9 @@ func PathExists(path string) (bool, error) {
 func WriteToBuf(key string, data interface{}) {
 	if bufMap[key] == nil {
 		ilog.ErrorLogger.Println(key)
+		bufMap[key] = new(bytes.Buffer)
 	} else {
 		binary.Write(bufMap[key], binary.LittleEndian, data)
+		bufMap[key].Reset()
 	}
 }

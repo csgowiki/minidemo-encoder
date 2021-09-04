@@ -3,8 +3,8 @@ package encoder
 import (
 	"bytes"
 	"os"
-	"time"
 	"strconv"
+	"time"
 
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 )
@@ -121,5 +121,5 @@ func WriteToRecFile(playerName string, roundNum int32) {
 	}
 
 	file.Write(bufMap[playerName].Bytes())
-	ilog.InfoLogger.Printf("[%d]初始化成功: %s\n", roundNum, playerName)
+	ilog.InfoLogger.Printf("[第%d回合] 选手录像保存成功: %s.rec\n", roundNum, playerName)
 }
