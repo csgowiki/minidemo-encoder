@@ -1,3 +1,3 @@
-# hltv-recording-api
+# Mini Demo Encoder
 
 docs in writting
