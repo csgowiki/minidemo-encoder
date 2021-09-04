@@ -3,6 +3,7 @@ static/
 demofiles/
 json/
 temp/
+temp_/
 rec/
 build.sh
 

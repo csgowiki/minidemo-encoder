@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"encoding/json"
@@ -20,6 +20,8 @@ var (
 	ErrorLogger   *log.Logger
 )
 
+const IN_ATTACK = (1 << 0)
+const IN_ATTACK2 = (1 << 11)
 const IN_JUMP int32 = (1 << 1)
 const IN_DUCK int32 = (1 << 2)
 const IN_RELOAD int32 = (1 << 13)
@@ -91,6 +93,7 @@ type PlayerInfo struct {
 	VelocityY     float32 `json:"VelocityY"`
 	VelocityZ     float32 `json:"VelocityZ"`
 	PlayerButtons int32   `json:"Buttons"`
+	ActiveWeapon  string  `json:"ActiveWeapon"`
 	IsAlive       bool    `json:"IsAlive"`
 }
 
@@ -160,7 +163,7 @@ func parsePlayer(player *common.Player) PlayerInfo {
 	if player.IsReloading {
 		currentPlayer.PlayerButtons |= IN_RELOAD
 	}
-	if player.IsDucking() || player.IsDuckingInProgress() {
+	if player.IsDucking() || player.IsDuckingInProgress() || player.IsUnDuckingInProgress() {
 		currentPlayer.PlayerButtons |= IN_DUCK
 	}
 	if player.IsAirborne() {
@@ -168,6 +171,12 @@ func parsePlayer(player *common.Player) PlayerInfo {
 	}
 	if player.IsWalking() {
 		currentPlayer.PlayerButtons |= IN_SPEED
+	}
+	if player.IsScoped() {
+		currentPlayer.PlayerButtons |= IN_ZOOM
+	}
+	if currentPlayer.IsAlive {
+		currentPlayer.ActiveWeapon = player.ActiveWeapon().String()
 	}
 	//
 	// ...
@@ -183,7 +192,8 @@ func cleanMapName(mapName string) string {
 	}
 	return mapName[lastSlash+1:]
 }
-func main() {
+
+func start_parse() {
 	// arg info
 	ArgParser()
 	f, err := os.Open(filePath)
@@ -486,7 +496,8 @@ func main() {
 		InfoLogger.Println("Cleaned data, writing to JSON file")
 
 		// Write the JSON
-		file, _ := json.MarshalIndent(currentGame.Rounds[3], "", " ")
+		// file, _ := json.MarshalIndent(currentGame.Rounds[3], "", " ")
+		file, _ := json.MarshalIndent(currentGame, "", " ")
 		_ = ioutil.WriteFile("json"+"/"+currentGame.MatchName+".json", file, 0644)
 		InfoLogger.Println("Wrote to JSON file to: " + "json" + "/" + currentGame.MatchName + ".json")
 	}

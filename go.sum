@@ -27,6 +27,8 @@ github.com/markus-wa/quickhull-go/v2 v2.1.0/go.mod h1:bOlBUpIzGSMMhHX0f9N8CQs0VZ
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/pnxenopoulos/csgonavparse v0.0.0-20200805220556-354c86f74907 h1:YIhgY+aMsxtWT3Ic1v64HmXQ8UvpINmpXfpffL33ZoI=
+github.com/pnxenopoulos/csgonavparse v0.0.0-20200805220556-354c86f74907/go.mod h1:BrVTeWKMxq4qxi4QZFUVA0VyAJYtmUZyYvIdnfBLbww=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
