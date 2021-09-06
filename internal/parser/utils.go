@@ -27,6 +27,7 @@ func parsePlayerInitFrame(player *common.Player) {
 	encoder.InitPlayer(iFrameInit)
 }
 
+
 func parsePlayerFrame(player *common.Player, isAttack bool) {
 	if !player.IsAlive() {
 		return
@@ -54,7 +55,6 @@ func parsePlayerFrame(player *common.Player, isAttack bool) {
 	iFrameInfo.AtOrigin[0] = float32(player.Position().X)
 	iFrameInfo.AtOrigin[1] = float32(player.Position().Y)
 	iFrameInfo.AtOrigin[2] = float32(player.Position().Z)
-
 	encoder.PlayerFramesMap[player.Name] = append(encoder.PlayerFramesMap[player.Name], *iFrameInfo)
 }
 
