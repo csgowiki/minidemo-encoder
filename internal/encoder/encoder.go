@@ -11,9 +11,9 @@ import (
 
 var __MAGIC__ int32 = -559038737
 var __FORMAT_VERSION__ int8 = 2
-var __FIELDS_ORIGIN__ int32 = 1 << 0
-var __FIELDS_ANGLES__ int32 = 1 << 1
-var __FIELDS_VELOCITY__ int32 = 1 << 2
+var FIELDS_ORIGIN int32 = 1 << 0
+var FIELDS_ANGLES int32 = 1 << 1
+var FIELDS_VELOCITY int32 = 1 << 2
 
 var bufMap map[string]*bytes.Buffer = make(map[string]*bytes.Buffer)
 var PlayerFramesMap map[string][]FrameInfo = make(map[string][]FrameInfo)
@@ -103,17 +103,17 @@ func WriteToRecFile(playerName string, roundNum int32) {
 		WriteToBuf(playerName, frame.PlayerSeed)
 		WriteToBuf(playerName, frame.AdditionalFields)
 		// 附加信息
-		if frame.AdditionalFields|__FIELDS_ORIGIN__ != 0 {
+		if frame.AdditionalFields&FIELDS_ORIGIN != 0 {
 			for idx := 0; idx < 3; idx++ {
 				WriteToBuf(playerName, frame.AtOrigin[idx])
 			}
 		}
-		if frame.AdditionalFields|__FIELDS_ANGLES__ != 0 {
+		if frame.AdditionalFields&FIELDS_ANGLES != 0 {
 			for idx := 0; idx < 3; idx++ {
 				WriteToBuf(playerName, frame.AtAngles[idx])
 			}
 		}
-		if frame.AdditionalFields|__FIELDS_VELOCITY__ != 0 {
+		if frame.AdditionalFields&FIELDS_VELOCITY != 0 {
 			for idx := 0; idx < 3; idx++ {
 				WriteToBuf(playerName, frame.AtVelocity[idx])
 			}

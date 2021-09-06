@@ -31,6 +31,6 @@ func WriteToBuf(key string, data interface{}) {
 		bufMap[key] = new(bytes.Buffer)
 	} else {
 		binary.Write(bufMap[key], binary.LittleEndian, data)
-		bufMap[key].Reset()
+		// bufMap[key].Reset()
 	}
 }

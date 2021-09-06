@@ -5,11 +5,11 @@ import time
 __MAGIC__ = b'\xef\xbe\xad\xde'
 __FORMAT_VERSION__ = b'\x02'
 
-__FIELDS_ORIGIN__ = 1 << 0
-__FIELDS_ANGLES__ = 1 << 1
-__FIELDS_VELOCITY__ = 1 << 2
+FIELDS_ORIGIN = 1 << 0
+FIELDS_ANGLES = 1 << 1
+FIELDS_VELOCITY = 1 << 2
 
-with open('output/round2/olofmeister.rec', 'rb') as iFile:
+with open('output/round1/shox.rec', 'rb') as iFile:
     # Step 1: valid check
     _buffer = iFile.read(4)
     assert _buffer == __MAGIC__
@@ -92,7 +92,7 @@ with open('output/round2/olofmeister.rec', 'rb') as iFile:
         _buffer = iFile.read(4)
         addFields, = struct.unpack('i', _buffer)
         
-        #if addFields & (__FIELDS_ORIGIN__ | __FIELDS_ANGLES__ | __FIELDS_VELOCITY__):
+        #if addFields & (FIELDS_ORIGIN | FIELDS_ANGLES | FIELDS_VELOCITY):
         if newWeapon != 0:
             print(f'tick: {tick}')
             print(f'playerButtons: {playerButtons}')
@@ -106,17 +106,17 @@ with open('output/round2/olofmeister.rec', 'rb') as iFile:
             print(f'addFields: {addFields}')
             print()
 
-        if (addFields &  __FIELDS_ORIGIN__):
+        if (addFields &  FIELDS_ORIGIN):
             nowOrigin = []
             for idx in range(3):
                 _buffer = iFile.read(4)
                 nowOrigin.append(struct.unpack('f', _buffer)[0])
-        if (addFields &  __FIELDS_ANGLES__):
+        if (addFields &  FIELDS_ANGLES):
             nowAngle = []
             for idx in range(3):
                 _buffer = iFile.read(4)
                 nowAngle.append(struct.unpack('f', _buffer)[0])
-        if (addFields &  __FIELDS_VELOCITY__):
+        if (addFields &  FIELDS_VELOCITY):
             nowVelocity = []
             for idx in range(3):
                 _buffer = iFile.read(4)
