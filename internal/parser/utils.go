@@ -6,6 +6,8 @@ import (
 	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
 )
 
+var bufWeaponMap map[string]int32 = make(map[string]int32)
+
 // Function to handle errors
 func checkError(err error) {
 	if err != nil {
@@ -25,8 +27,8 @@ func parsePlayerInitFrame(player *common.Player) {
 	iFrameInit.Angles[1] = float32(player.ViewDirectionX())
 
 	encoder.InitPlayer(iFrameInit)
+	delete(bufWeaponMap, player.Name)
 }
-
 
 func parsePlayerFrame(player *common.Player, isAttack bool) {
 	if !player.IsAlive() {
@@ -51,6 +53,19 @@ func parsePlayerFrame(player *common.Player, isAttack bool) {
 	} else {
 		iFrameInfo.CSWeaponID = 0 // glock
 	}
+	var currWeaponID int32 = int32(WeaponStr2ID(player.ActiveWeapon().String()))
+
+	if len(encoder.PlayerFramesMap[player.Name]) == 0 {
+		iFrameInfo.CSWeaponID = currWeaponID
+		bufWeaponMap[player.Name] = currWeaponID
+	} else if currWeaponID == bufWeaponMap[player.Name] {
+		iFrameInfo.CSWeaponID = int32(CSWeapon_NONE)
+	} else {
+		iFrameInfo.CSWeaponID = currWeaponID
+		bufWeaponMap[player.Name] = currWeaponID
+	}
+
+	// 附加项
 	iFrameInfo.AdditionalFields |= encoder.FIELDS_ORIGIN
 	iFrameInfo.AtOrigin[0] = float32(player.Position().X)
 	iFrameInfo.AtOrigin[1] = float32(player.Position().Y)

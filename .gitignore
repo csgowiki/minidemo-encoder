@@ -6,7 +6,8 @@ temp/
 temp_/
 rec/
 output/
-build.sh
+build-test.sh
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

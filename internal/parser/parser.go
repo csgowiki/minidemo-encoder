@@ -23,14 +23,13 @@ func Start() {
 		roundStarted      = 0
 		roundInFreezetime = 0
 		roundNum          = 0
-		currentFrameIdx   = 0
 	)
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 
-		if (roundInFreezetime == 0) && (currentFrameIdx == 0) {
+		if roundInFreezetime == 0 {
 			tPlayers := gs.TeamTerrorists().Members()
 			ctPlayers := gs.TeamCounterTerrorists().Members()
 			Players := append(tPlayers, ctPlayers...)
@@ -50,14 +49,7 @@ func Start() {
 				}
 			}
 			delete(attackTickMap, currentTick)
-		} else {
-			if currentFrameIdx == 0 {
-				currentFrameIdx = 0
-			} else {
-				currentFrameIdx = currentFrameIdx + 1
-			}
 		}
-
 	})
 
 	iParser.RegisterEventHandler(func(e events.WeaponFire) {
