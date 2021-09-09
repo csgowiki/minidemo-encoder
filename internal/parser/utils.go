@@ -43,18 +43,14 @@ func parsePlayerFrame(player *common.Player, isAttack bool) {
 	iFrameInfo.ActualVelocity[2] = float32(player.Velocity().Z)
 	iFrameInfo.PredictedAngles[0] = player.ViewDirectionY()
 	iFrameInfo.PredictedAngles[1] = player.ViewDirectionX()
-	// ----- button encode
-	iFrameInfo.PlayerButtons = 0
 	iFrameInfo.PlayerImpulse = 0
 	iFrameInfo.PlayerSeed = 0
 	iFrameInfo.PlayerSubtype = 0
-	if len(encoder.PlayerFramesMap[player.Name]) == 0 {
-		iFrameInfo.CSWeaponID = 2
-	} else {
-		iFrameInfo.CSWeaponID = 0 // glock
-	}
-	var currWeaponID int32 = int32(WeaponStr2ID(player.ActiveWeapon().String()))
+	// ----- button encode
+	iFrameInfo.PlayerButtons = ButtonConvert(player, isAttack)
 
+	// ---- weapon encode
+	var currWeaponID int32 = int32(WeaponStr2ID(player.ActiveWeapon().String()))
 	if len(encoder.PlayerFramesMap[player.Name]) == 0 {
 		iFrameInfo.CSWeaponID = currWeaponID
 		bufWeaponMap[player.Name] = currWeaponID
