@@ -42,6 +42,15 @@ func ButtonConvert(player *common.Player, isAttacking bool) int32 {
 	if player.Flags().DuckingKeyPressed() {
 		button |= IN_DUCK
 	}
+	if player.IsWalking() {
+		button |= IN_SPEED
+	}
+	if player.IsReloading {
+		button |= IN_RELOAD
+	}
+	if player.IsAirborne() {
+		button |= IN_JUMP
+	}
 
 	return button
 }

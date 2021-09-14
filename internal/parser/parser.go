@@ -45,6 +45,7 @@ func Start() {
 							}
 						}
 					}
+					
 					parsePlayerFrame(player, isAttacking)
 				}
 			}
@@ -85,6 +86,26 @@ func Start() {
 
 	// 正式结束，包括自由活动时间
 	iParser.RegisterEventHandler(func(e events.RoundEndOfficial) {
+		// ilog.InfoLogger.Println("回合结束：", roundNum)
+		// // 结束录像文件
+		// gs := iParser.GameState()
+		// tPlayers := gs.TeamTerrorists().Members()
+		// ctPlayers := gs.TeamCounterTerrorists().Members()
+		// Players := append(tPlayers, ctPlayers...)
+		// for _, player := range Players {
+		// 	if player != nil {
+		// 		// save to rec file
+		// 		saveToRecFile(player, int32(roundNum))
+		// 	}
+		// }
+	})
+
+	// 回合结束，不包括自由活动时间
+	iParser.RegisterEventHandler(func(e events.RoundEnd) {
+		if roundStarted == 0 {
+			roundStarted = 1
+			roundNum = 0
+		}
 		ilog.InfoLogger.Println("回合结束：", roundNum)
 		// 结束录像文件
 		gs := iParser.GameState()
@@ -96,14 +117,6 @@ func Start() {
 				// save to rec file
 				saveToRecFile(player, int32(roundNum))
 			}
-		}
-	})
-
-	// 回合结束，不包括自由活动时间
-	iParser.RegisterEventHandler(func(e events.RoundEnd) {
-		if roundStarted == 0 {
-			roundStarted = 1
-			roundNum = 0
 		}
 	})
 	err = iParser.ParseToEnd()
