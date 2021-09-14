@@ -22,7 +22,6 @@ func parsePlayerInitFrame(player *common.Player) {
 	iFrameInit.Position[0] = float32(player.Position().X)
 	iFrameInit.Position[1] = float32(player.Position().Y)
 	iFrameInit.Position[2] = float32(player.Position().Z)
-	// 注意XY，需要测试
 	iFrameInit.Angles[0] = float32(player.ViewDirectionY())
 	iFrameInit.Angles[1] = float32(player.ViewDirectionX())
 
@@ -66,6 +65,14 @@ func parsePlayerFrame(player *common.Player, isAttack bool) {
 	iFrameInfo.AtOrigin[0] = float32(player.Position().X)
 	iFrameInfo.AtOrigin[1] = float32(player.Position().Y)
 	iFrameInfo.AtOrigin[2] = float32(player.Position().Z)
+	iFrameInfo.AdditionalFields |= encoder.FIELDS_ANGLES
+	iFrameInfo.AtAngles[0] = float32(player.ViewDirectionY())
+	iFrameInfo.AtAngles[1] = float32(player.ViewDirectionX())
+	iFrameInfo.AtAngles[2] = 0
+	iFrameInfo.AdditionalFields |= encoder.FIELDS_VELOCITY
+	iFrameInfo.AtVelocity[0] = float32(player.Velocity().X)
+	iFrameInfo.AtVelocity[1] = float32(player.Velocity().Y)
+	iFrameInfo.AtVelocity[2] = float32(player.Velocity().Z)
 	encoder.PlayerFramesMap[player.Name] = append(encoder.PlayerFramesMap[player.Name], *iFrameInfo)
 }
 
