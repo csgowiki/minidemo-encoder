@@ -18,7 +18,7 @@ func Start() {
 
 	// 用来记录某一Tick下WeaponAttack事件，在FrameDone中处理
 	var attackTickMap map[int][]events.WeaponFire = make(map[int][]events.WeaponFire)
-	// flags
+	var jumpTickMap map[int][]uint64 = make(map[int][]uint64)
 	var (
 		roundStarted      = 0
 		roundInFreezetime = 0
@@ -36,20 +36,28 @@ func Start() {
 			for _, player := range Players {
 				if player != nil {
 					// 解析WeaponAttack事件
-					var isAttacking bool = false
+					var addonButton int32 = 0
 					if attackEvent, ok := attackTickMap[currentTick]; ok {
 						for _, atEvent := range attackEvent {
 							if atEvent.Shooter.SteamID64 == player.SteamID64 {
-								isAttacking = true
+								addonButton |= IN_ATTACK
 								break
 							}
 						}
 					}
-					
-					parsePlayerFrame(player, isAttacking)
+					if jumpList, ok := jumpTickMap[currentTick]; ok {
+						for _, steamid := range jumpList {
+							if steamid == player.SteamID64 {
+								addonButton |= IN_JUMP
+								break
+							}
+						}
+					}
+					parsePlayerFrame(player, addonButton)
 				}
 			}
 			delete(attackTickMap, currentTick)
+			delete(jumpTickMap, currentTick)
 		}
 	})
 
@@ -58,6 +66,13 @@ func Start() {
 		currentTick := gs.IngameTick()
 		attackTickMap[currentTick] = append(attackTickMap[currentTick], e)
 	})
+
+	iParser.RegisterEventHandler(func(e events.PlayerJump) {
+		gs := iParser.GameState()
+		currentTick := gs.IngameTick()
+		jumpTickMap[currentTick] = append(jumpTickMap[currentTick], e.Player.SteamID64)
+	})
+
 
 	// 包括开局准备时间
 	iParser.RegisterEventHandler(func(e events.RoundStart) {
@@ -82,22 +97,6 @@ func Start() {
 				parsePlayerInitFrame(player)
 			}
 		}
-	})
-
-	// 正式结束，包括自由活动时间
-	iParser.RegisterEventHandler(func(e events.RoundEndOfficial) {
-		// ilog.InfoLogger.Println("回合结束：", roundNum)
-		// // 结束录像文件
-		// gs := iParser.GameState()
-		// tPlayers := gs.TeamTerrorists().Members()
-		// ctPlayers := gs.TeamCounterTerrorists().Members()
-		// Players := append(tPlayers, ctPlayers...)
-		// for _, player := range Players {
-		// 	if player != nil {
-		// 		// save to rec file
-		// 		saveToRecFile(player, int32(roundNum))
-		// 	}
-		// }
 	})
 
 	// 回合结束，不包括自由活动时间

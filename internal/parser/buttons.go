@@ -34,11 +34,8 @@ const (
 	IN_ATTACK3         = (1 << 25)
 )
 
-func ButtonConvert(player *common.Player, isAttacking bool) int32 {
-	var button int32 = 0
-	if isAttacking {
-		button |= IN_ATTACK
-	}
+func ButtonConvert(player *common.Player, addonButton int32) int32 {
+	var button int32 = addonButton
 	if player.Flags().DuckingKeyPressed() {
 		button |= IN_DUCK
 	}
@@ -48,9 +45,5 @@ func ButtonConvert(player *common.Player, isAttacking bool) int32 {
 	if player.IsReloading {
 		button |= IN_RELOAD
 	}
-	if player.IsAirborne() {
-		button |= IN_JUMP
-	}
-
 	return button
 }

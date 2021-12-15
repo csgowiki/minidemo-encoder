@@ -93,7 +93,8 @@ with open('output/round1/shox.rec', 'rb') as iFile:
         addFields, = struct.unpack('i', _buffer)
         
         #if addFields & (FIELDS_ORIGIN | FIELDS_ANGLES | FIELDS_VELOCITY):
-        if newWeapon != 0:
+        # if newWeapon != 0:
+        if playerButtons & (1 << 1):
             print(f'tick: {tick}')
             print(f'playerButtons: {playerButtons}')
             print(f'playerImpulse: {playerImpulse}')
