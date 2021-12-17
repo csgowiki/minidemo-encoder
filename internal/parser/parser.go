@@ -8,6 +8,11 @@ import (
 	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
 )
 
+type TickPlayer struct {
+	tick int
+	steamid uint64
+}
+
 func Start() {
 	filePath := "./demofiles/faze-vs-vitality-m1-mirage.dem"
 	iFile, err := os.Open(filePath)
@@ -16,14 +21,14 @@ func Start() {
 	iParser := dem.NewParser(iFile)
 	defer iParser.Close()
 
-	// 用来记录某一Tick下WeaponAttack事件，在FrameDone中处理
-	var attackTickMap map[int][]events.WeaponFire = make(map[int][]events.WeaponFire)
-	var jumpTickMap map[int][]uint64 = make(map[int][]uint64)
+	// 处理特殊event构成的button表示
+	var buttonTickMap map[TickPlayer]int32 = make(map[TickPlayer]int32)
 	var (
 		roundStarted      = 0
 		roundInFreezetime = 0
 		roundNum          = 0
 	)
+	var countdown int = 10000
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
 		gs := iParser.GameState()
@@ -35,42 +40,39 @@ func Start() {
 			Players := append(tPlayers, ctPlayers...)
 			for _, player := range Players {
 				if player != nil {
-					// 解析WeaponAttack事件
 					var addonButton int32 = 0
-					if attackEvent, ok := attackTickMap[currentTick]; ok {
-						for _, atEvent := range attackEvent {
-							if atEvent.Shooter.SteamID64 == player.SteamID64 {
-								addonButton |= IN_ATTACK
-								break
-							}
-						}
+					key := TickPlayer{currentTick, player.SteamID64}
+					if val, ok := buttonTickMap[key]; ok {
+						addonButton = val
+						delete(buttonTickMap, key)
 					}
-					if jumpList, ok := jumpTickMap[currentTick]; ok {
-						for _, steamid := range jumpList {
-							if steamid == player.SteamID64 {
-								addonButton |= IN_JUMP
-								break
-							}
-						}
-					}
-					parsePlayerFrame(player, addonButton)
+					parsePlayerFrame(player, addonButton, countdown > 0)
+					countdown --
 				}
 			}
-			delete(attackTickMap, currentTick)
-			delete(jumpTickMap, currentTick)
 		}
 	})
 
 	iParser.RegisterEventHandler(func(e events.WeaponFire) {
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
-		attackTickMap[currentTick] = append(attackTickMap[currentTick], e)
+		key := TickPlayer{currentTick, e.Shooter.SteamID64}
+		if _, ok := buttonTickMap[key]; ok {
+			buttonTickMap[key] |= IN_ATTACK
+		} else {
+			buttonTickMap[key] = IN_ATTACK
+		}
 	})
 
 	iParser.RegisterEventHandler(func(e events.PlayerJump) {
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
-		jumpTickMap[currentTick] = append(jumpTickMap[currentTick], e.Player.SteamID64)
+		key := TickPlayer{currentTick, e.Player.SteamID64}
+		if _, ok := buttonTickMap[key]; ok {
+			buttonTickMap[key] |= IN_JUMP
+		} else {
+			buttonTickMap[key] = IN_JUMP
+		}
 	})
 
 
@@ -83,6 +85,7 @@ func Start() {
 	// 准备时间结束，正式开始
 	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
 		roundInFreezetime = 0
+		countdown = 10000
 		roundNum += 1
 		ilog.InfoLogger.Println("回合开始：", roundNum)
 		// 初始化录像文件
