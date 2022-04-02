@@ -28,7 +28,6 @@ func Start() {
 		roundInFreezetime = 0
 		roundNum          = 0
 	)
-	var countdown int = 10000
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
 		gs := iParser.GameState()
@@ -46,8 +45,7 @@ func Start() {
 						addonButton = val
 						delete(buttonTickMap, key)
 					}
-					parsePlayerFrame(player, addonButton, countdown > 0)
-					countdown --
+					parsePlayerFrame(player, addonButton, false)
 				}
 			}
 		}
@@ -85,7 +83,6 @@ func Start() {
 	// 准备时间结束，正式开始
 	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
 		roundInFreezetime = 0
-		countdown = 10000
 		roundNum += 1
 		ilog.InfoLogger.Println("回合开始：", roundNum)
 		// 初始化录像文件
