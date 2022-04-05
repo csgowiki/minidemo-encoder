@@ -9,6 +9,7 @@ import (
 )
 
 var bufWeaponMap map[string]int32 = make(map[string]int32)
+var playerLastZ map[string]float32 = make(map[string]float32)
 
 // Function to handle errors
 func checkError(err error) {
@@ -29,6 +30,8 @@ func parsePlayerInitFrame(player *common.Player) {
 
 	encoder.InitPlayer(iFrameInit)
 	delete(bufWeaponMap, player.Name)
+
+	playerLastZ[player.Name] = 0.0
 }
 
 const Pi = 3.14159265358979323846
@@ -43,12 +46,6 @@ func normalizeDegree(degree float64) float64 {
 	}
 	return degree
 }
-
-var (
-	lastX float32
-	lastY float32
-	lastZ float32
-)
 
 func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64, fullsnap bool) {
 	if !player.IsAlive() {
@@ -88,50 +85,42 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 		iFrameInfo.AtOrigin[1] = float32(player.Position().Y)
 		iFrameInfo.AtOrigin[2] = float32(player.Position().Z)
 	}
-	// test
-	if player.Name == "b1t" {
-		deltaX := float32(player.Position().X) - lastX
-		deltaY := float32(player.Position().Y) - lastY
-		deltaZ := float32(player.Position().Z) - lastZ
-		lastX = float32(player.Position().X)
-		lastY = float32(player.Position().Y)
-		lastZ = float32(player.Position().Z)
+	// record Z velocity
+	deltaZ := float32(player.Position().Z) - playerLastZ[player.Name]
+	playerLastZ[player.Name] = float32(player.Position().Z)
 
-		// velocity in Z direction need to be recorded specially
-		iFrameInfo.ActualVelocity[0] = deltaX * float32(tickrate)
-		iFrameInfo.ActualVelocity[1] = deltaY * float32(tickrate)
-		iFrameInfo.ActualVelocity[2] = deltaZ * float32(tickrate)
+	// velocity in Z direction need to be recorded specially
+	iFrameInfo.ActualVelocity[2] = deltaZ * float32(tickrate)
 
-		// Since I don't know how to get player's button bits in a tick frame,
-		// I have to use *actual vels* and *angles* to generate *predict vels* approximately
-		// This will cause some error, but it's not a big deal
-		if iFrameInfo.ActualVelocity[0] != 0 || iFrameInfo.ActualVelocity[1] != 0 {
-			var velAngle float64 = 0.0
-			if iFrameInfo.ActualVelocity[0] == 0.0 {
-				if iFrameInfo.ActualVelocity[1] < 0.0 {
-					velAngle = 270.0
-				} else {
-					velAngle = 90.0
-				}
+	// Since I don't know how to get player's button bits in a tick frame,
+	// I have to use *actual vels* and *angles* to generate *predict vels* approximately
+	// This will cause some error, but it's not a big deal
+	if iFrameInfo.ActualVelocity[0] != 0 || iFrameInfo.ActualVelocity[1] != 0 {
+		var velAngle float64 = 0.0
+		if iFrameInfo.ActualVelocity[0] == 0.0 {
+			if iFrameInfo.ActualVelocity[1] < 0.0 {
+				velAngle = 270.0
 			} else {
-				velAngle = radian2degree(math.Atan2(float64(iFrameInfo.ActualVelocity[1]), float64(iFrameInfo.ActualVelocity[0])))
-				velAngle = normalizeDegree(velAngle)
+				velAngle = 90.0
 			}
-			faceFront := normalizeDegree(float64(iFrameInfo.PredictedAngles[1]))
-			deltaAngle := normalizeDegree(velAngle - faceFront)
-			const threshold = 30.0
-			if 0.0+threshold < deltaAngle && deltaAngle < 180.0-threshold {
-				iFrameInfo.PredictedVelocity[1] = -450.0 // left
-			}
-			if 90.0+threshold < deltaAngle && deltaAngle < 270.0-threshold {
-				iFrameInfo.PredictedVelocity[0] = -450.0 // back
-			}
-			if 180.0+threshold < deltaAngle && deltaAngle < 360.0-threshold {
-				iFrameInfo.PredictedVelocity[1] = 450.0 // right
-			}
-			if 270.0+threshold < deltaAngle || deltaAngle < 90.0-threshold {
-				iFrameInfo.PredictedVelocity[0] = 450.0 // front
-			}
+		} else {
+			velAngle = radian2degree(math.Atan2(float64(iFrameInfo.ActualVelocity[1]), float64(iFrameInfo.ActualVelocity[0])))
+			velAngle = normalizeDegree(velAngle)
+		}
+		faceFront := normalizeDegree(float64(iFrameInfo.PredictedAngles[1]))
+		deltaAngle := normalizeDegree(velAngle - faceFront)
+		const threshold = 30.0
+		if 0.0+threshold < deltaAngle && deltaAngle < 180.0-threshold {
+			iFrameInfo.PredictedVelocity[1] = -450.0 // left
+		}
+		if 90.0+threshold < deltaAngle && deltaAngle < 270.0-threshold {
+			iFrameInfo.PredictedVelocity[0] = -450.0 // back
+		}
+		if 180.0+threshold < deltaAngle && deltaAngle < 360.0-threshold {
+			iFrameInfo.PredictedVelocity[1] = 450.0 // right
+		}
+		if 270.0+threshold < deltaAngle || deltaAngle < 90.0-threshold {
+			iFrameInfo.PredictedVelocity[0] = 450.0 // front
 		}
 	}
 
