@@ -37,9 +37,15 @@ func parsePlayerFrame(player *common.Player, addonButton int32, fullsnap bool) {
 	iFrameInfo.PredictedVelocity[0] = 0.0
 	iFrameInfo.PredictedVelocity[1] = 0.0
 	iFrameInfo.PredictedVelocity[2] = 0.0
-	iFrameInfo.ActualVelocity[0] = float32(player.Velocity().X)
-	iFrameInfo.ActualVelocity[1] = float32(player.Velocity().Y)
-	iFrameInfo.ActualVelocity[2] = float32(player.Velocity().Z)
+	// 测试速度
+	// iFrameInfo.ActualVelocity[0] = float32(player.Velocity().X)
+	// iFrameInfo.ActualVelocity[1] = float32(player.Velocity().Y)
+	// iFrameInfo.ActualVelocity[2] = float32(player.Velocity().Z)
+	// iFrameInfo.ActualVelocity 速度x为450 其余为0
+	iFrameInfo.ActualVelocity[0] = 450.0
+	iFrameInfo.ActualVelocity[1] = 0.0
+	iFrameInfo.ActualVelocity[2] = 0.0
+	
 	iFrameInfo.PredictedAngles[0] = player.ViewDirectionY()
 	iFrameInfo.PredictedAngles[1] = player.ViewDirectionX()
 	iFrameInfo.PlayerImpulse = 0
