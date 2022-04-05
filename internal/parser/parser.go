@@ -13,8 +13,7 @@ type TickPlayer struct {
 	steamid uint64
 }
 
-func Start() {
-	filePath := "./demofiles/faze-vs-vitality-m1-mirage.dem"
+func Start(filePath string) {
 	iFile, err := os.Open(filePath)
 	checkError(err)
 
