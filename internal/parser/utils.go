@@ -105,31 +105,33 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 		// Since I don't know how to get player's button bits in a tick frame,
 		// I have to use *actual vels* and *angles* to generate *predict vels* approximately
 		// This will cause some error, but it's not a big deal
-		var velAngle float64 = 0.0
-		if iFrameInfo.ActualVelocity[0] == 0.0 {
-			if iFrameInfo.ActualVelocity[1] < 0.0 {
-				velAngle = 270.0
+		if iFrameInfo.ActualVelocity[0] != 0 || iFrameInfo.ActualVelocity[1] != 0 {
+			var velAngle float64 = 0.0
+			if iFrameInfo.ActualVelocity[0] == 0.0 {
+				if iFrameInfo.ActualVelocity[1] < 0.0 {
+					velAngle = 270.0
+				} else {
+					velAngle = 90.0
+				}
 			} else {
-				velAngle = 90.0
+				velAngle = radian2degree(math.Atan2(float64(iFrameInfo.ActualVelocity[1]), float64(iFrameInfo.ActualVelocity[0])))
+				velAngle = normalizeDegree(velAngle)
 			}
-		} else {
-			velAngle = radian2degree(math.Atan2(float64(iFrameInfo.ActualVelocity[1]), float64(iFrameInfo.ActualVelocity[0])))
-			velAngle = normalizeDegree(velAngle)
-		}
-		faceFront := normalizeDegree(float64(iFrameInfo.PredictedAngles[1]))
-		deltaAngle := normalizeDegree(velAngle - faceFront)
-		const threshold = 30.0
-		if 0.0+threshold < deltaAngle && deltaAngle < 180.0-threshold {
-			iFrameInfo.PredictedVelocity[1] = -450.0 // left
-		}
-		if 90.0+threshold < deltaAngle && deltaAngle < 270.0-threshold {
-			iFrameInfo.PredictedVelocity[0] = -450.0 // back
-		}
-		if 180.0+threshold < deltaAngle && deltaAngle < 360.0-threshold {
-			iFrameInfo.PredictedVelocity[1] = 450.0 // right
-		}
-		if 270.0+threshold < deltaAngle || deltaAngle < 90.0-threshold {
-			iFrameInfo.PredictedVelocity[0] = 450.0 // front
+			faceFront := normalizeDegree(float64(iFrameInfo.PredictedAngles[1]))
+			deltaAngle := normalizeDegree(velAngle - faceFront)
+			const threshold = 30.0
+			if 0.0+threshold < deltaAngle && deltaAngle < 180.0-threshold {
+				iFrameInfo.PredictedVelocity[1] = -450.0 // left
+			}
+			if 90.0+threshold < deltaAngle && deltaAngle < 270.0-threshold {
+				iFrameInfo.PredictedVelocity[0] = -450.0 // back
+			}
+			if 180.0+threshold < deltaAngle && deltaAngle < 360.0-threshold {
+				iFrameInfo.PredictedVelocity[1] = 450.0 // right
+			}
+			if 270.0+threshold < deltaAngle || deltaAngle < 90.0-threshold {
+				iFrameInfo.PredictedVelocity[0] = 450.0 // front
+			}
 		}
 	}
 
