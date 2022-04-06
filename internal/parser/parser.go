@@ -9,7 +9,7 @@ import (
 )
 
 type TickPlayer struct {
-	tick int
+	tick    int
 	steamid uint64
 }
 
@@ -71,7 +71,6 @@ func Start(filePath string) {
 			buttonTickMap[key] = IN_JUMP
 		}
 	})
-
 
 	// 包括开局准备时间
 	iParser.RegisterEventHandler(func(e events.RoundStart) {

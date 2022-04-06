@@ -9,11 +9,11 @@ import (
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 )
 
-var __MAGIC__ int32 = -559038737
-var __FORMAT_VERSION__ int8 = 2
-var FIELDS_ORIGIN int32 = 1 << 0
-var FIELDS_ANGLES int32 = 1 << 1
-var FIELDS_VELOCITY int32 = 1 << 2
+const __MAGIC__ int32 = -559038737
+const __FORMAT_VERSION__ int8 = 2
+const FIELDS_ORIGIN int32 = 1 << 0
+const FIELDS_ANGLES int32 = 1 << 1
+const FIELDS_VELOCITY int32 = 1 << 2
 
 var bufMap map[string]*bytes.Buffer = make(map[string]*bytes.Buffer)
 var PlayerFramesMap map[string][]FrameInfo = make(map[string][]FrameInfo)

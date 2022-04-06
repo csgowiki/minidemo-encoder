@@ -8,6 +8,8 @@ import (
 	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
 )
 
+const Pi = 3.14159265358979323846
+
 var bufWeaponMap map[string]int32 = make(map[string]int32)
 var playerLastZ map[string]float32 = make(map[string]float32)
 
@@ -33,8 +35,6 @@ func parsePlayerInitFrame(player *common.Player) {
 
 	playerLastZ[player.Name] = 0.0
 }
-
-const Pi = 3.14159265358979323846
 
 func radian2degree(radian float64) float64 {
 	return radian * 180 / Pi
@@ -123,7 +123,6 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 			iFrameInfo.PredictedVelocity[0] = 450.0 // front
 		}
 	}
-
 	encoder.PlayerFramesMap[player.Name] = append(encoder.PlayerFramesMap[player.Name], *iFrameInfo)
 }
 

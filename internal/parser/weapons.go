@@ -134,7 +134,7 @@ func init() {
 		"Desert Eagle":  CSWeapon_DEAGLE,
 		"R8 Revolver":   CSWeapon_REVOLVER,
 		"Glock-18":      CSWeapon_GLOCK,
-		"USP-S":         CSWeapon_USP,
+		"USP-S":         CSWeapon_USP_SILENCER,
 		"Five-SeveN":    CSWeapon_FIVESEVEN,
 		"Tec-9":         CSWeapon_TEC9,
 		"p250":          CSWeapon_P250,
