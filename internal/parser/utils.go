@@ -94,7 +94,7 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 	iFrameInfo.ActualVelocity[2] = deltaZ * float32(tickrate)
 
 	// Since I don't know how to get player's button bits in a tick frame,
-	// I have to use *actual vels* and *angles* to generate *predict vels* approximately
+	// I have to use *actual vels* and *angles* to generate *predicted vels* approximately
 	// This will cause some error, but it's not a big deal
 	if iFrameInfo.ActualVelocity[0] != 0 || iFrameInfo.ActualVelocity[1] != 0 {
 		var velAngle float64 = 0.0
@@ -109,18 +109,27 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 		}
 		faceFront := normalizeDegree(float64(iFrameInfo.PredictedAngles[1]))
 		deltaAngle := normalizeDegree(velAngle - faceFront)
+
+		// We assume that actual velocity in tick N
+		// is influenced by predicted velocity in tick N-1
+		var _preVel *[3]float32 = &iFrameInfo.PredictedVelocity
+		if len(encoder.PlayerFramesMap[player.Name]) != 0 {
+			lastIdx := len(encoder.PlayerFramesMap[player.Name]) - 1
+			_preVel = &encoder.PlayerFramesMap[player.Name][lastIdx].PredictedVelocity
+		}
+
 		const threshold = 30.0
 		if 0.0+threshold < deltaAngle && deltaAngle < 180.0-threshold {
-			iFrameInfo.PredictedVelocity[1] = -450.0 // left
+			_preVel[1] = -450.0 // left
 		}
 		if 90.0+threshold < deltaAngle && deltaAngle < 270.0-threshold {
-			iFrameInfo.PredictedVelocity[0] = -450.0 // back
+			_preVel[0] = -450.0 // back
 		}
 		if 180.0+threshold < deltaAngle && deltaAngle < 360.0-threshold {
-			iFrameInfo.PredictedVelocity[1] = 450.0 // right
+			_preVel[1] = 450.0 // right
 		}
 		if 270.0+threshold < deltaAngle || deltaAngle < 90.0-threshold {
-			iFrameInfo.PredictedVelocity[0] = 450.0 // front
+			_preVel[0] = 450.0 // front
 		}
 	}
 
