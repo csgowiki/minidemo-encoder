@@ -36,15 +36,16 @@ func parsePlayerInitFrame(player *common.Player) {
 	playerLastZ[player.Name] = 0.0
 }
 
-func radian2degree(radian float64) float64 {
-	return radian * 180 / Pi
-}
-
 func normalizeDegree(degree float64) float64 {
 	if degree < 0.0 {
 		degree = degree + 360.0
 	}
 	return degree
+}
+
+// accept radian, return degree in [0, 360)
+func radian2degree(radian float64) float64 {
+	return normalizeDegree(radian * 180 / Pi)
 }
 
 func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64, fullsnap bool) {
@@ -105,7 +106,6 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 			}
 		} else {
 			velAngle = radian2degree(math.Atan2(float64(iFrameInfo.ActualVelocity[1]), float64(iFrameInfo.ActualVelocity[0])))
-			velAngle = normalizeDegree(velAngle)
 		}
 		faceFront := normalizeDegree(float64(iFrameInfo.PredictedAngles[1]))
 		deltaAngle := normalizeDegree(velAngle - faceFront)
@@ -123,6 +123,7 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 			iFrameInfo.PredictedVelocity[0] = 450.0 // front
 		}
 	}
+
 	encoder.PlayerFramesMap[player.Name] = append(encoder.PlayerFramesMap[player.Name], *iFrameInfo)
 }
 
