@@ -33,7 +33,7 @@ func parsePlayerInitFrame(player *common.Player) {
 	encoder.InitPlayer(iFrameInit)
 	delete(bufWeaponMap, player.Name)
 
-	playerLastZ[player.Name] = 0.0
+	playerLastZ[player.Name] = float32(player.Position().Z)
 }
 
 func normalizeDegree(degree float64) float64 {
@@ -96,6 +96,9 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 	// Since I don't know how to get player's button bits in a tick frame,
 	// I have to use *actual vels* and *angles* to generate *predicted vels* approximately
 	// This will cause some error, but it's not a big deal
+	//
+	// PV = 0.0 when AV(tick N-1) = 0.0 and AV(tick N) = 0.0 ?
+	// Note: AV=Actual Velocity, PV=Predicted Velocity
 	if iFrameInfo.ActualVelocity[0] != 0 || iFrameInfo.ActualVelocity[1] != 0 {
 		var velAngle float64 = 0.0
 		if iFrameInfo.ActualVelocity[0] == 0.0 {
@@ -112,7 +115,7 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 
 		// We assume that actual velocity in tick N
 		// is influenced by predicted velocity in tick N-1
-		var _preVel *[3]float32 = &iFrameInfo.PredictedVelocity
+		_preVel := &iFrameInfo.PredictedVelocity
 		if len(encoder.PlayerFramesMap[player.Name]) != 0 {
 			lastIdx := len(encoder.PlayerFramesMap[player.Name]) - 1
 			_preVel = &encoder.PlayerFramesMap[player.Name][lastIdx].PredictedVelocity
