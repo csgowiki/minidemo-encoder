@@ -59,7 +59,7 @@ func InitPlayer(initFrame FrameInitInfo) {
 	for idx := 0; idx < 2; idx++ {
 		WriteToBuf(initFrame.PlayerName, initFrame.Angles[idx])
 	}
-	ilog.InfoLogger.Println("初始化成功: ", initFrame.PlayerName)
+	// ilog.InfoLogger.Println("初始化成功: ", initFrame.PlayerName)
 }
 
 func WriteToRecFile(playerName string, roundNum int32) {
