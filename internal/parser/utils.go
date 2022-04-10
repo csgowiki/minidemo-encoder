@@ -69,7 +69,10 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 	iFrameInfo.PlayerButtons = ButtonConvert(player, addonButton)
 
 	// ---- weapon encode
-	var currWeaponID int32 = int32(WeaponStr2ID(player.ActiveWeapon().String()))
+	var currWeaponID int32 = 0
+	if player.ActiveWeapon() != nil {
+		currWeaponID = int32(WeaponStr2ID(player.ActiveWeapon().String()))
+	}
 	if len(encoder.PlayerFramesMap[player.Name]) == 0 {
 		iFrameInfo.CSWeaponID = currWeaponID
 		bufWeaponMap[player.Name] = currWeaponID
