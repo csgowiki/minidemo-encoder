@@ -80,7 +80,8 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 	}
 
 	// 附加项
-	if fullsnap || (len(encoder.PlayerFramesMap[player.Name])+1)%1000 == 0 {
+	// if fullsnap || (len(encoder.PlayerFramesMap[player.Name])+1)%5000 == 0 {
+	if false {
 		iFrameInfo.AdditionalFields |= encoder.FIELDS_ORIGIN
 		iFrameInfo.AtOrigin[0] = float32(player.Position().X)
 		iFrameInfo.AtOrigin[1] = float32(player.Position().Y)
@@ -150,5 +151,9 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 }
 
 func saveToRecFile(player *common.Player, roundNum int32) {
-	encoder.WriteToRecFile(player.Name, roundNum)
+	if player.Team == common.TeamTerrorists {
+		encoder.WriteToRecFile(player.Name, roundNum, "t")
+	} else {
+		encoder.WriteToRecFile(player.Name, roundNum, "ct")
+	}
 }
