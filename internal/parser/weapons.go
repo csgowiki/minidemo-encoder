@@ -137,7 +137,7 @@ func init() {
 		"USP-S":         CSWeapon_USP_SILENCER,
 		"Five-SeveN":    CSWeapon_FIVESEVEN,
 		"Tec-9":         CSWeapon_TEC9,
-		"p250":          CSWeapon_P250,
+		"P250":          CSWeapon_P250,
 		"CZ75 Auto":     CSWeapon_CZ75A,
 		"Dual Berettas": CSWeapon_ELITE,
 		"P2000":         CSWeapon_HKP2000,
