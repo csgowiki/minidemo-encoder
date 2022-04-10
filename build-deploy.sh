@@ -1,4 +1,4 @@
-# sh build.sh
+sh build.sh
 
 dist=~/steamcmd/games/csgo/csgo/addons/sourcemod/data/botmimic/new/
 rm -rf $dist*

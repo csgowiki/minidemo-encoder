@@ -32,6 +32,7 @@ func parsePlayerInitFrame(player *common.Player) {
 
 	encoder.InitPlayer(iFrameInit)
 	delete(bufWeaponMap, player.Name)
+	delete(encoder.PlayerFramesMap, player.Name)
 
 	playerLastZ[player.Name] = float32(player.Position().Z)
 }
@@ -79,16 +80,17 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 		bufWeaponMap[player.Name] = currWeaponID
 	}
 
-	// 附加项
-	// if fullsnap || (len(encoder.PlayerFramesMap[player.Name])+1)%5000 == 0 {
-	if false {
+	lastIdx := len(encoder.PlayerFramesMap[player.Name]) - 1
+	// addons
+	if fullsnap || (lastIdx < 2000 && (lastIdx+1)%100 == 0) || (lastIdx >= 2000 && (lastIdx+1)%100 == 0) {
+		// if false {
 		iFrameInfo.AdditionalFields |= encoder.FIELDS_ORIGIN
 		iFrameInfo.AtOrigin[0] = float32(player.Position().X)
 		iFrameInfo.AtOrigin[1] = float32(player.Position().Y)
 		iFrameInfo.AtOrigin[2] = float32(player.Position().Z)
-		iFrameInfo.AdditionalFields |= encoder.FIELDS_ANGLES
-		iFrameInfo.AtAngles[0] = float32(player.ViewDirectionY())
-		iFrameInfo.AtAngles[1] = float32(player.ViewDirectionX())
+		// iFrameInfo.AdditionalFields |= encoder.FIELDS_ANGLES
+		// iFrameInfo.AtAngles[0] = float32(player.ViewDirectionY())
+		// iFrameInfo.AtAngles[1] = float32(player.ViewDirectionX())
 		iFrameInfo.AdditionalFields |= encoder.FIELDS_VELOCITY
 		iFrameInfo.AtVelocity[0] = float32(player.Velocity().X)
 		iFrameInfo.AtVelocity[1] = float32(player.Velocity().Y)
@@ -104,8 +106,6 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 	// Since I don't know how to get player's button bits in a tick frame,
 	// I have to use *actual vels* and *angles* to generate *predicted vels* approximately
 	// This will cause some error, but it's not a big deal
-
-	lastIdx := len(encoder.PlayerFramesMap[player.Name]) - 1
 	if lastIdx >= 0 { // not first frame
 		// We assume that actual velocity in tick N
 		// is influenced by predicted velocity in tick N-1
