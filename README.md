@@ -73,4 +73,4 @@ v1.4.4一直没有发布，可以在仓库里手动下载编译版本，如果�
 
 下载站尝试过Tencent Cloud COS，解决方案见：[**minidemo-hltv**](https://github.com/csgowiki/minidemo-hltv)
 
-希望这些想法对你有所帮助s
+希望这些想法对你有所帮助
