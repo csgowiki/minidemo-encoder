@@ -29,7 +29,7 @@
 
 ## BotMimic
 
-原版的botmimic使用的sourcemod环境落后，如果你没有一个可以运行指定.rec文件的插件，可以参考我的另一个插件：[**csgowiki-pack v1.4.4**](https://github.com/csgowiki/csgowiki-pack/blob/dev-1.4.4) 来自行修改。
+原版的botmimic使用的sourcemod环境落后，如果你没有一个可以运行指定.rec文件的插件，可以参考我的另一个插件：[**csgowiki-pack v1.4.4**](https://github.com/csgowiki/csgowiki-pack/tree/dev-1.4.4) 来自行修改。
 
 v1.4.4一直没有发布，可以在仓库里手动下载编译版本，如果有余力的话，可以参考源码 [**replay.sp**](https://github.com/csgowiki/csgowiki-pack/blob/dev-1.4.4/scripting/csgowiki/minidemo/replay.sp) 实现自己的回放管理插件。
 
