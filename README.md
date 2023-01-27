@@ -16,7 +16,7 @@
    git clone https://github.com/csgowiki/minidemo-encoder.git
    ```
 2. 下载需要解析的demo文件
-   > 完美经济平台的demo文件修改过格式，解析会出问题，建议用HLTV的demo
+   > 完美竞技平台的demo文件修改过格式，解析会出问题，建议用HLTV的demo
 3. 安装golang环境
 4. 运行脚本
    ```bash
@@ -49,7 +49,7 @@ v1.4.4一直没有发布，可以在仓库里手动下载编译版本，如果�
 
 但是由于Demo文件中只记录了当前帧的玩家速度，并没有记录当前帧玩家的所有交互信息，所以无法准确给出当前帧玩家速度的变化，所以导致了生成的回放文件，在回放过程中bot随着时间的增加越来越偏离实际路线的情况。
 
-为了规避这种现象，只能使用BotMimic提供的关键帧标记：可以选择某一帧为关键帧，在关键帧同步bot与demo中玩家的位置/角度/速度，以实现归零误差的效果。
+为了规避这种现象，只能使用BotMimic提供的关键帧标记：可以选择某一帧为关键帧，在关键帧同步bot与demo中玩家的**位置**/**朝向**/**速度**，以实现归零误差的效果。
 
 但也正如开头所说，如果关键帧设置的频率太高，bot的移动会非常不流畅，如果频率过低，bot的运动误差会过大。为了优化该问题，我尽可能通过已知的数据预测当前帧的玩家速度变化，减少运动误差：[internal/parser/utils.go#L109-L151](https://github.com/csgowiki/minidemo-encoder/blob/0762925497d26f15c728c5f37a5fd720470d2186/internal/parser/utils.go#L109-L151)，但是效果并不明显。
 
@@ -69,8 +69,8 @@ v1.4.4一直没有发布，可以在仓库里手动下载编译版本，如果�
 
 ## Future
 
-我的最初规划是借用 [**hltv-utility-api**](https://github.com/csgowiki/hltv-utility-api) 的思路，提供一个高性能的，实时更新的CSGO demo-rec的下载站，每日更新HLTV上的职业比赛录像，玩家可以在服务器中使用特定插件下载录像，通过bot回放的形式观看对局。
+我的最初规划是借用 [**hltv-utility-api**](https://github.com/csgowiki/hltv-utility-api) 的思路，提供一个高性能的，实时更新的CSGO demo-to-rec的下载站，每日更新HLTV上的职业比赛录像，玩家可以在服务器中使用特定插件下载录像，通过bot回放的形式观看对局。
 
-下载站尝试过Tencent Cloud COS，解决方案见：[**minidemo-hltv**](https://github.com/csgowiki/minidemo-hltv)
+下载站尝试过Tencent Cloud COS，解决方案见：[**minidemo-hltv**](https://github.com/csgowiki/minidemo-hltv)。
 
-希望这些想法对你有所帮助
+希望这些想法对你有所帮助。
